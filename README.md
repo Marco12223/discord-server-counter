@@ -34,6 +34,12 @@ Die Daten werden serverseitig mit PHP (cURL) abgefragt und im Browser dargestell
 
 ---
 
+## 🖼️ Screenshots
+<img width="1920" height="330" alt="grafik" src="https://github.com/user-attachments/assets/19d64fa7-cf71-4d92-b7ff-60aa9d938e24" />
+<img width="1920" height="621" alt="grafik" src="https://github.com/user-attachments/assets/7614f6af-6e18-4fbe-a358-eddddfef8d31" />
+
+---
+
 ## ⚠️ Hinweis
 
 Kein offizielles Discord Produkt.
