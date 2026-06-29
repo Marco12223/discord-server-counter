@@ -121,21 +121,34 @@ document.addEventListener('DOMContentLoaded', () => {
     async function loadGuilds(afterId = null) {
         if (!guildsList || !guildsSpinner) return;
 
-        if (!afterId) {
+        const isInitial = !afterId;
+        const originalBtnHtml = loadMoreBtn ? loadMoreBtn.innerHTML : 'Mehr laden';
+
+        if (isInitial) {
             guildsList.innerHTML = '';
             currentGuilds = [];
             lastGuildId = null;
+            guildsSpinner.style.display = 'block';
+            if (paginationContainer) paginationContainer.style.display = 'none';
+        } else if (loadMoreBtn) {
+            loadMoreBtn.disabled = true;
+            loadMoreBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Lädt...';
         }
 
-        guildsSpinner.style.display = 'block';
-        if (paginationContainer) paginationContainer.style.display = 'none';
-
         try {
-            let url = 'api_guilds.php?limit=50';
-            if (afterId) url += `&after=${afterId}`;
+            var url = 'api_guilds.php?limit=25';
+            if (afterId) {
+                url += '&after=' + encodeURIComponent(afterId);
+            }
 
             const res = await fetch(url, { credentials: 'same-origin' });
-            if (!res.ok) throw new Error('Netzwerkfehler');
+            
+            if (!res.ok) {
+                const text = await res.text();
+                console.error('Server-Fehler:', res.status, text);
+                throw new Error('Netzwerkfehler: ' + res.status);
+            }
+
             const data = await res.json();
 
             const newGuilds = data.guilds || [];
@@ -151,19 +164,35 @@ document.addEventListener('DOMContentLoaded', () => {
 
             if (hasMoreGuilds && paginationContainer) {
                 paginationContainer.style.display = 'block';
+            } else if (paginationContainer) {
+                paginationContainer.style.display = 'none';
             }
         } catch (err) {
             console.error('Fehler beim Laden der Server:', err);
-            if (!afterId) {
+            if (isInitial) {
                 guildsList.innerHTML = '<div class="error">Fehler beim Laden der Server.</div>';
             }
         } finally {
-            guildsSpinner.style.display = 'none';
+            if (isInitial) {
+                guildsSpinner.style.display = 'none';
+            } else if (loadMoreBtn) {
+                loadMoreBtn.disabled = false;
+                loadMoreBtn.innerHTML = originalBtnHtml;
+            }
         }
     }
 
-    // delegated event handler for copy and sort buttons
+    // delegated event handler for copy, sort and pagination buttons
     document.body.addEventListener('click', async (e) => {
+        // load more button handler - check this first because it might have .copy-btn for styling
+        const moreBtn = e.target.closest('#load-more-btn');
+        if (moreBtn) {
+            if (hasMoreGuilds && lastGuildId) {
+                loadGuilds(lastGuildId);
+            }
+            return;
+        }
+
         const copyBtn = e.target.closest('.copy-btn');
         if (copyBtn) {
             const value = copyBtn.dataset.copyValue || '';
@@ -211,14 +240,6 @@ document.addEventListener('DOMContentLoaded', () => {
             // apply sorting
             renderGuilds(currentGuilds);
             return;
-        }
-
-        // load more button handler
-        const moreBtn = e.target.closest('#load-more-btn');
-        if (moreBtn) {
-            if (hasMoreGuilds && lastGuildId) {
-                loadGuilds(lastGuildId);
-            }
         }
     });
 
