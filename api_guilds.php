@@ -15,7 +15,15 @@ if (!$token) {
     exit;
 }
 
-[$guilds, $err] = discordApiRequest($appConfig['discord_api_base'] . '/users/@me/guilds', $token);
+$limit = isset($_GET['limit']) ? min(100, (int)$_GET['limit']) : 50;
+$after = $_GET['after'] ?? null;
+
+$url = $appConfig['discord_api_base'] . '/users/@me/guilds?limit=' . $limit;
+if ($after) {
+    $url .= '&after=' . $after;
+}
+
+[$guilds, $err] = discordApiRequest($url, $token);
 
 if ($err) {
     http_response_code(502);
@@ -127,4 +135,11 @@ usort($result, function ($a, $b) {
     return $tb <=> $ta;
 });
 
-echo json_encode(['guilds' => $result]);
+$discordLastId = !empty($guilds) && is_array($guilds) ? end($guilds)['id'] : null;
+$hasMore = is_array($guilds) && count($guilds) === $limit;
+
+echo json_encode([
+    'guilds' => $result,
+    'lastId' => $discordLastId,
+    'hasMore' => $hasMore
+]);
