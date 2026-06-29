@@ -16,18 +16,38 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         if ($token === '') {
             $error = 'Bitte Token eingeben';
         } else {
-            [$bot, $error] = discordApiRequest($appConfig['discord_api_base'] . '/users/@me', $token);
+            // Fetch bot info and application info in parallel to save time
+            $results = multiFetch([
+                'bot' => $appConfig['discord_api_base'] . '/users/@me',
+                'app' => $appConfig['discord_api_base'] . '/applications/@me'
+            ], $token);
 
-            if (!$error && $bot) {
-                // persist token in session for async requests during this session
-                $_SESSION['bot_token'] = $token;
-                $_SESSION['bot_id'] = $bot['id'] ?? null;
+            $botRes = $results['bot'] ?? null;
+            $appRes = $results['app'] ?? null;
+
+            if ($botRes && !$botRes['error']) {
+                $bot = json_decode($botRes['body'], true);
+                if ($bot && isset($bot['id'])) {
+                    $_SESSION['bot_token'] = $token;
+                    $_SESSION['bot_id'] = $bot['id'];
+
+                    if ($appRes && !$appRes['error']) {
+                        $app = json_decode($appRes['body'], true);
+                        if (isset($app['approximate_guild_count'])) {
+                            $_SESSION['bot_guild_count'] = $app['approximate_guild_count'];
+                        }
+                    }
+                } else {
+                    $error = 'Ungültige Antwort von Discord';
+                }
+            } else {
+                $error = $botRes['error'] ?? 'Login fehlgeschlagen';
             }
         }
     }
 }
 
-$guildCount = count($guilds ?? []);
+$guildCount = $_SESSION['bot_guild_count'] ?? 0;
 ?>
 
 <!DOCTYPE html>

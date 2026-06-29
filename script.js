@@ -156,8 +156,14 @@ document.addEventListener('DOMContentLoaded', () => {
             lastGuildId = data.lastId;
             hasMoreGuilds = data.hasMore;
 
-            // update count
-            if (guildCountEl) guildCountEl.textContent = `${currentGuilds.length} Server`;
+            // update count - prefer totalCount from API if available
+            if (guildCountEl) {
+                if (data.totalCount !== null && data.totalCount !== undefined) {
+                    guildCountEl.textContent = `${data.totalCount} Server`;
+                } else {
+                    guildCountEl.textContent = `${currentGuilds.length} Server`;
+                }
+            }
 
             // render with current sort state
             renderGuilds(currentGuilds);
