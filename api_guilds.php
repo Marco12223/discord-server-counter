@@ -1,4 +1,5 @@
 <?php
+ob_start();
 require_once __DIR__ . '/config.php';
 require_once __DIR__ . '/functions.php';
 
@@ -15,7 +16,7 @@ if (!$token) {
     exit;
 }
 
-$limit = isset($_GET['limit']) ? min(100, (int)$_GET['limit']) : 50;
+$limit = isset($_GET['limit']) ? min(100, (int)$_GET['limit']) : 25;
 $after = $_GET['after'] ?? null;
 
 $url = $appConfig['discord_api_base'] . '/users/@me/guilds?limit=' . $limit;
@@ -130,16 +131,23 @@ if (is_array($guilds)) {
 
 // sort by joined_at descending (newest first). Nulls go last.
 usort($result, function ($a, $b) {
-    $ta = isset($a['joined_at']) ? strtotime($a['joined_at']) : 0;
-    $tb = isset($b['joined_at']) ? strtotime($b['joined_at']) : 0;
+    $ta = !empty($a['joined_at']) ? strtotime($a['joined_at']) : 0;
+    $tb = !empty($b['joined_at']) ? strtotime($b['joined_at']) : 0;
+    
+    if ($ta === false) $ta = 0;
+    if ($tb === false) $tb = 0;
+
     return $tb <=> $ta;
 });
 
-$discordLastId = !empty($guilds) && is_array($guilds) ? end($guilds)['id'] : null;
-$hasMore = is_array($guilds) && count($guilds) === $limit;
+$discordLastId = (is_array($guilds) && !empty($guilds)) ? end($guilds)['id'] : null;
+$hasMore = (is_array($guilds) && count($guilds) === $limit);
 
+if (ob_get_length()) ob_clean();
+header('Content-Type: application/json; charset=utf-8');
 echo json_encode([
     'guilds' => $result,
     'lastId' => $discordLastId,
     'hasMore' => $hasMore
-]);
+], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+exit;
